@@ -1,6 +1,15 @@
 <template>
-  <div class="c-chart__container">
-    <v-chart ref="chart" :option="chartOptions" />
+  <div>
+    <div class="c-date-inputs__container">
+      <label>Start date</label>
+      <input type="date" v-model="startDate" />
+      <label>End date</label>
+      <input type="date" v-model="endDate" />
+      <button type="button" class="c-button" v-on:click="filterChartDate">Filter</button>
+    </div>
+    <div class="c-chart__container">
+      <v-chart ref="chart" :option="chartOptions" />
+    </div>
   </div>
 </template>
 
@@ -16,6 +25,7 @@ import {
   VisualMapComponent,
 } from "echarts/components";
 import VChart from "vue-echarts";
+import PerformanceService from "../../services/performance.service";
 
 use([
   CanvasRenderer,
@@ -35,36 +45,10 @@ export default {
 
   data() {
     return {
-      chartData: [
-        {
-          date_ms: 1641772800000,
-          performance: 0.2,
-        },
-        {
-          date_ms: 1641859200000,
-          performance: 0.33,
-        },
-        {
-          date_ms: 1641945600000,
-          performance: 0.53,
-        },
-        {
-          date_ms: 1642032000000,
-          performance: 0.31,
-        },
-        {
-          date_ms: 1642118400000,
-          performance: 0.65,
-        },
-        {
-          date_ms: 1642204800000,
-          performance: 0.88,
-        },
-        {
-          date_ms: 1642291200000,
-          performance: 0.07,
-        },
-      ],
+      chartData: [],
+      originalChartData: [],
+      startDate: "",
+      endDate: "",
     };
   },
 
@@ -117,6 +101,7 @@ export default {
         },
         series: [
           {
+            name: "Team Performance Index",
             data: this.yAxisData,
             type: "line",
             symbol: "circle",
@@ -127,6 +112,36 @@ export default {
             },
           },
         ],
+        visualMap: {
+          top: 50,
+          right: 10,
+          pieces: [
+            {
+              gt: 0,
+              lte: 50,
+              color: "#F4674C"
+            },
+            {
+              gt: 50,
+              lte: 80,
+              color: "#FBDB10"
+            },
+            {
+              gt: 80,
+              lte: 100,
+              color: "#01984F"
+            },
+          ],
+        },
+        tooltip: {
+          trigger: "axis",
+          formatter: "<b>{b}</b><br/>{a}: {c}%",
+          backgroundColor: "#16253F",
+          textStyle: {
+            color: "#fff",
+          },
+          extraCssText: "text-align: center"
+        },
       };
     },
 
@@ -143,6 +158,15 @@ export default {
     formatDate(dateInMs) {
       return moment(dateInMs).format("DD MMM YYYY");
     },
+    filterChartDate() {
+      const start = moment(this.startDate);
+      const end = moment(this.endDate);
+      this.chartData = this.originalChartData.filter(data => moment(data.date_ms).startOf("day").diff(start, "days") >= 0 && moment(data.date_ms).startOf("day").diff(end, "days") <= 0);
+    },
   },
+
+  mounted() {
+    PerformanceService.getPerformance().then((data) => this.originalChartData = this.chartData = data);
+  }
 };
 </script>
